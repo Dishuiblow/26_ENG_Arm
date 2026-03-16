@@ -3,7 +3,17 @@
   ******************************************************************************
   * @file    usart.c
   * @brief   This file provides code for the configuration
-  * of the USART instances.
+  *          of the USART instances.
+  ******************************************************************************
+  * @attention
+  *
+  * Copyright (c) 2026 STMicroelectronics.
+  * All rights reserved.
+  *
+  * This software is licensed under terms that can be found in the LICENSE file
+  * in the root directory of this software component.
+  * If no LICENSE file comes with this software, it is provided AS-IS.
+  *
   ******************************************************************************
   */
 /* USER CODE END Header */
@@ -11,26 +21,73 @@
 #include "usart.h"
 
 /* USER CODE BEGIN 0 */
-#include "stdio.h"
 
-int fputc(int ch, FILE *f)
-{
-  HAL_UART_Transmit(&huart7, (uint8_t *)&ch, 1, 0xffff);
-  return ch;
-}
 /* USER CODE END 0 */
 
+UART_HandleTypeDef huart5;
 UART_HandleTypeDef huart7;
 UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart10;
-
-// 【修改】去除了 USART10 的 DMA 句柄，增加了 USART1 的 RX 句柄
-DMA_HandleTypeDef hdma_usart1_rx; 
+DMA_HandleTypeDef hdma_usart1_rx;
 DMA_HandleTypeDef hdma_usart1_tx;
+DMA_HandleTypeDef hdma_usart10_rx;
 
+/* UART5 init function */
+void MX_UART5_Init(void)
+{
+
+  /* USER CODE BEGIN UART5_Init 0 */
+
+  /* USER CODE END UART5_Init 0 */
+
+  /* USER CODE BEGIN UART5_Init 1 */
+
+  /* USER CODE END UART5_Init 1 */
+  huart5.Instance = UART5;
+  huart5.Init.BaudRate = 100000;
+  huart5.Init.WordLength = UART_WORDLENGTH_8B;
+  huart5.Init.StopBits = UART_STOPBITS_1;
+  huart5.Init.Parity = UART_PARITY_NONE;
+  huart5.Init.Mode = UART_MODE_RX;
+  huart5.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart5.Init.OverSampling = UART_OVERSAMPLING_16;
+  huart5.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+  huart5.Init.ClockPrescaler = UART_PRESCALER_DIV1;
+  huart5.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_RXOVERRUNDISABLE_INIT|UART_ADVFEATURE_DMADISABLEONERROR_INIT;
+  huart5.AdvancedInit.OverrunDisable = UART_ADVFEATURE_OVERRUN_DISABLE;
+  huart5.AdvancedInit.DMADisableonRxError = UART_ADVFEATURE_DMA_DISABLEONRXERROR;
+  if (HAL_UART_Init(&huart5) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_UARTEx_SetTxFifoThreshold(&huart5, UART_TXFIFO_THRESHOLD_1_8) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_UARTEx_SetRxFifoThreshold(&huart5, UART_RXFIFO_THRESHOLD_1_8) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_UARTEx_DisableFifoMode(&huart5) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN UART5_Init 2 */
+
+  /* USER CODE END UART5_Init 2 */
+
+}
 /* UART7 init function */
 void MX_UART7_Init(void)
 {
+
+  /* USER CODE BEGIN UART7_Init 0 */
+
+  /* USER CODE END UART7_Init 0 */
+
+  /* USER CODE BEGIN UART7_Init 1 */
+
+  /* USER CODE END UART7_Init 1 */
   huart7.Instance = UART7;
   huart7.Init.BaudRate = 115200;
   huart7.Init.WordLength = UART_WORDLENGTH_8B;
@@ -41,7 +98,9 @@ void MX_UART7_Init(void)
   huart7.Init.OverSampling = UART_OVERSAMPLING_16;
   huart7.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
   huart7.Init.ClockPrescaler = UART_PRESCALER_DIV1;
-  huart7.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+  huart7.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_RXOVERRUNDISABLE_INIT|UART_ADVFEATURE_DMADISABLEONERROR_INIT;
+  huart7.AdvancedInit.OverrunDisable = UART_ADVFEATURE_OVERRUN_DISABLE;
+  huart7.AdvancedInit.DMADisableonRxError = UART_ADVFEATURE_DMA_DISABLEONRXERROR;
   if (HAL_UART_Init(&huart7) != HAL_OK)
   {
     Error_Handler();
@@ -58,23 +117,36 @@ void MX_UART7_Init(void)
   {
     Error_Handler();
   }
-}
+  /* USER CODE BEGIN UART7_Init 2 */
 
+  /* USER CODE END UART7_Init 2 */
+
+}
 /* USART1 init function */
+
 void MX_USART1_UART_Init(void)
 {
+
+  /* USER CODE BEGIN USART1_Init 0 */
+
+  /* USER CODE END USART1_Init 0 */
+
+  /* USER CODE BEGIN USART1_Init 1 */
+
+  /* USER CODE END USART1_Init 1 */
   huart1.Instance = USART1;
-  // 【注意】作为图传/电脑测试主力接收端，当前为你保留 921600。实车接图传时改为 115200。
-  huart1.Init.BaudRate = 921600; 
+  huart1.Init.BaudRate = 100000;
   huart1.Init.WordLength = UART_WORDLENGTH_8B;
   huart1.Init.StopBits = UART_STOPBITS_1;
-  huart1.Init.Parity = UART_PARITY_NONE;
+  huart1.Init.Parity = UART_PARITY_EVEN;
   huart1.Init.Mode = UART_MODE_TX_RX;
   huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
   huart1.Init.OverSampling = UART_OVERSAMPLING_16;
   huart1.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
   huart1.Init.ClockPrescaler = UART_PRESCALER_DIV1;
-  huart1.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+  huart1.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_RXOVERRUNDISABLE_INIT|UART_ADVFEATURE_DMADISABLEONERROR_INIT;
+  huart1.AdvancedInit.OverrunDisable = UART_ADVFEATURE_OVERRUN_DISABLE;
+  huart1.AdvancedInit.DMADisableonRxError = UART_ADVFEATURE_DMA_DISABLEONRXERROR;
   if (HAL_UART_Init(&huart1) != HAL_OK)
   {
     Error_Handler();
@@ -91,14 +163,25 @@ void MX_USART1_UART_Init(void)
   {
     Error_Handler();
   }
-}
+  /* USER CODE BEGIN USART1_Init 2 */
 
+  /* USER CODE END USART1_Init 2 */
+
+}
 /* USART10 init function */
+
 void MX_USART10_UART_Init(void)
 {
+
+  /* USER CODE BEGIN USART10_Init 0 */
+
+  /* USER CODE END USART10_Init 0 */
+
+  /* USER CODE BEGIN USART10_Init 1 */
+
+  /* USER CODE END USART10_Init 1 */
   huart10.Instance = USART10;
-  // 【修改】波特率改回 115200，因为总线舵机的默认通信速率是 115200
-  huart10.Init.BaudRate = 115200;
+  huart10.Init.BaudRate = 100000;
   huart10.Init.WordLength = UART_WORDLENGTH_8B;
   huart10.Init.StopBits = UART_STOPBITS_1;
   huart10.Init.Parity = UART_PARITY_NONE;
@@ -107,7 +190,9 @@ void MX_USART10_UART_Init(void)
   huart10.Init.OverSampling = UART_OVERSAMPLING_16;
   huart10.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
   huart10.Init.ClockPrescaler = UART_PRESCALER_DIV1;
-  huart10.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+  huart10.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_RXOVERRUNDISABLE_INIT|UART_ADVFEATURE_DMADISABLEONERROR_INIT;
+  huart10.AdvancedInit.OverrunDisable = UART_ADVFEATURE_OVERRUN_DISABLE;
+  huart10.AdvancedInit.DMADisableonRxError = UART_ADVFEATURE_DMA_DISABLEONRXERROR;
   if (HAL_UART_Init(&huart10) != HAL_OK)
   {
     Error_Handler();
@@ -124,36 +209,107 @@ void MX_USART10_UART_Init(void)
   {
     Error_Handler();
   }
+  /* USER CODE BEGIN USART10_Init 2 */
+
+  /* USER CODE END USART10_Init 2 */
+
 }
 
 void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
 {
+
   GPIO_InitTypeDef GPIO_InitStruct = {0};
   RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = {0};
-  
-  if(uartHandle->Instance==UART7)
+  if(uartHandle->Instance==UART5)
   {
+  /* USER CODE BEGIN UART5_MspInit 0 */
+
+  /* USER CODE END UART5_MspInit 0 */
+
+  /** Initializes the peripherals clock
+  */
+    PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_UART5;
+    PeriphClkInitStruct.Usart234578ClockSelection = RCC_USART234578CLKSOURCE_D2PCLK1;
+    if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
+    {
+      Error_Handler();
+    }
+
+    /* UART5 clock enable */
+    __HAL_RCC_UART5_CLK_ENABLE();
+
+    __HAL_RCC_GPIOC_CLK_ENABLE();
+    __HAL_RCC_GPIOD_CLK_ENABLE();
+    /**UART5 GPIO Configuration
+    PC12     ------> UART5_TX
+    PD2     ------> UART5_RX
+    */
+    GPIO_InitStruct.Pin = GPIO_PIN_12;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+    GPIO_InitStruct.Alternate = GPIO_AF8_UART5;
+    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+    GPIO_InitStruct.Pin = GPIO_PIN_2;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+    GPIO_InitStruct.Alternate = GPIO_AF8_UART5;
+    HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
+
+    /* UART5 interrupt Init */
+    HAL_NVIC_SetPriority(UART5_IRQn, 5, 0);
+    HAL_NVIC_EnableIRQ(UART5_IRQn);
+  /* USER CODE BEGIN UART5_MspInit 1 */
+
+  /* USER CODE END UART5_MspInit 1 */
+  }
+  else if(uartHandle->Instance==UART7)
+  {
+  /* USER CODE BEGIN UART7_MspInit 0 */
+
+  /* USER CODE END UART7_MspInit 0 */
+
+  /** Initializes the peripherals clock
+  */
     PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_UART7;
     PeriphClkInitStruct.Usart234578ClockSelection = RCC_USART234578CLKSOURCE_D2PCLK1;
     if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
     {
       Error_Handler();
     }
-    __HAL_RCC_UART7_CLK_ENABLE();
-    __HAL_RCC_GPIOE_CLK_ENABLE();
 
+    /* UART7 clock enable */
+    __HAL_RCC_UART7_CLK_ENABLE();
+
+    __HAL_RCC_GPIOE_CLK_ENABLE();
+    /**UART7 GPIO Configuration
+    PE7     ------> UART7_RX
+    PE8     ------> UART7_TX
+    */
     GPIO_InitStruct.Pin = GPIO_PIN_7|GPIO_PIN_8;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
     GPIO_InitStruct.Alternate = GPIO_AF7_UART7;
     HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
-    HAL_NVIC_SetPriority(UART7_IRQn, 0, 0);
+    /* UART7 interrupt Init */
+    HAL_NVIC_SetPriority(UART7_IRQn, 5, 0);
     HAL_NVIC_EnableIRQ(UART7_IRQn);
+  /* USER CODE BEGIN UART7_MspInit 1 */
+
+  /* USER CODE END UART7_MspInit 1 */
   }
   else if(uartHandle->Instance==USART1)
   {
+  /* USER CODE BEGIN USART1_MspInit 0 */
+
+  /* USER CODE END USART1_MspInit 0 */
+
+  /** Initializes the peripherals clock
+  */
     PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_USART1;
     PeriphClkInitStruct.Usart16ClockSelection = RCC_USART16910CLKSOURCE_D2PCLK2;
     if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
@@ -161,11 +317,14 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
       Error_Handler();
     }
 
+    /* USART1 clock enable */
     __HAL_RCC_USART1_CLK_ENABLE();
-    __HAL_RCC_GPIOA_CLK_ENABLE();
-    // 【极其致命的修复】：必须开启 DMA1 的时钟，否则 DMA 罢工！
-    __HAL_RCC_DMA1_CLK_ENABLE(); 
 
+    __HAL_RCC_GPIOA_CLK_ENABLE();
+    /**USART1 GPIO Configuration
+    PA9     ------> USART1_TX
+    PA10     ------> USART1_RX
+    */
     GPIO_InitStruct.Pin = GPIO_PIN_9|GPIO_PIN_10;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
@@ -174,8 +333,7 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
     /* USART1 DMA Init */
-    
-    // 【新增】：配置 USART1_RX 的 DMA (裁判系统双缓冲必备)
+    /* USART1_RX Init */
     hdma_usart1_rx.Instance = DMA1_Stream0;
     hdma_usart1_rx.Init.Request = DMA_REQUEST_USART1_RX;
     hdma_usart1_rx.Init.Direction = DMA_PERIPH_TO_MEMORY;
@@ -183,16 +341,17 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
     hdma_usart1_rx.Init.MemInc = DMA_MINC_ENABLE;
     hdma_usart1_rx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
     hdma_usart1_rx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
-    hdma_usart1_rx.Init.Mode = DMA_NORMAL;
+    hdma_usart1_rx.Init.Mode = DMA_CIRCULAR;
     hdma_usart1_rx.Init.Priority = DMA_PRIORITY_HIGH;
     hdma_usart1_rx.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
     if (HAL_DMA_Init(&hdma_usart1_rx) != HAL_OK)
     {
       Error_Handler();
     }
+
     __HAL_LINKDMA(uartHandle,hdmarx,hdma_usart1_rx);
 
-    // 保留你原本的 USART1_TX 的 DMA
+    /* USART1_TX Init */
     hdma_usart1_tx.Instance = DMA1_Stream1;
     hdma_usart1_tx.Init.Request = DMA_REQUEST_USART1_TX;
     hdma_usart1_tx.Init.Direction = DMA_MEMORY_TO_PERIPH;
@@ -207,14 +366,24 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
     {
       Error_Handler();
     }
+
     __HAL_LINKDMA(uartHandle,hdmatx,hdma_usart1_tx);
 
-    // 【新增】：开启 USART1 全局中断，为了响应 IDLE 串口空闲中断
-    HAL_NVIC_SetPriority(USART1_IRQn, 5, 0); 
+    /* USART1 interrupt Init */
+    HAL_NVIC_SetPriority(USART1_IRQn, 5, 0);
     HAL_NVIC_EnableIRQ(USART1_IRQn);
+  /* USER CODE BEGIN USART1_MspInit 1 */
+
+  /* USER CODE END USART1_MspInit 1 */
   }
   else if(uartHandle->Instance==USART10)
   {
+  /* USER CODE BEGIN USART10_MspInit 0 */
+
+  /* USER CODE END USART10_MspInit 0 */
+
+  /** Initializes the peripherals clock
+  */
     PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_USART10;
     PeriphClkInitStruct.Usart16ClockSelection = RCC_USART16910CLKSOURCE_D2PCLK2;
     if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
@@ -222,47 +391,153 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
       Error_Handler();
     }
 
+    /* USART10 clock enable */
     __HAL_RCC_USART10_CLK_ENABLE();
-    __HAL_RCC_GPIOE_CLK_ENABLE();
 
-    GPIO_InitStruct.Pin = GPIO_PIN_2|GPIO_PIN_3;
+    __HAL_RCC_GPIOE_CLK_ENABLE();
+    /**USART10 GPIO Configuration
+    PE2     ------> USART10_RX
+    PE3     ------> USART10_TX
+    */
+    GPIO_InitStruct.Pin = GPIO_PIN_2;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+    GPIO_InitStruct.Alternate = GPIO_AF4_USART10;
+    HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
+
+    GPIO_InitStruct.Pin = GPIO_PIN_3;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
     GPIO_InitStruct.Alternate = GPIO_AF11_USART10;
     HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
-    // 【修改】：彻底去除了 USART10 容易越界的 BDMA 注册代码
-    // 让 USART10 回归纯净，通过轮询或基础中断操控舵机
+    /* USART10 DMA Init */
+    /* USART10_RX Init */
+    hdma_usart10_rx.Instance = DMA1_Stream2;
+    hdma_usart10_rx.Init.Request = DMA_REQUEST_USART10_RX;
+    hdma_usart10_rx.Init.Direction = DMA_PERIPH_TO_MEMORY;
+    hdma_usart10_rx.Init.PeriphInc = DMA_PINC_DISABLE;
+    hdma_usart10_rx.Init.MemInc = DMA_MINC_ENABLE;
+    hdma_usart10_rx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
+    hdma_usart10_rx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
+    hdma_usart10_rx.Init.Mode = DMA_CIRCULAR;
+    hdma_usart10_rx.Init.Priority = DMA_PRIORITY_HIGH;
+    hdma_usart10_rx.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
+    if (HAL_DMA_Init(&hdma_usart10_rx) != HAL_OK)
+    {
+      Error_Handler();
+    }
+
+    __HAL_LINKDMA(uartHandle,hdmarx,hdma_usart10_rx);
 
     /* USART10 interrupt Init */
-    HAL_NVIC_SetPriority(USART10_IRQn, 6, 0);
+    HAL_NVIC_SetPriority(USART10_IRQn, 5, 0);
     HAL_NVIC_EnableIRQ(USART10_IRQn);
+  /* USER CODE BEGIN USART10_MspInit 1 */
+
+  /* USER CODE END USART10_MspInit 1 */
   }
 }
 
 void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
 {
-  if(uartHandle->Instance==UART7)
+
+  if(uartHandle->Instance==UART5)
   {
+  /* USER CODE BEGIN UART5_MspDeInit 0 */
+
+  /* USER CODE END UART5_MspDeInit 0 */
+    /* Peripheral clock disable */
+    __HAL_RCC_UART5_CLK_DISABLE();
+
+    /**UART5 GPIO Configuration
+    PC12     ------> UART5_TX
+    PD2     ------> UART5_RX
+    */
+    HAL_GPIO_DeInit(GPIOC, GPIO_PIN_12);
+
+    HAL_GPIO_DeInit(GPIOD, GPIO_PIN_2);
+
+    /* UART5 interrupt Deinit */
+    HAL_NVIC_DisableIRQ(UART5_IRQn);
+  /* USER CODE BEGIN UART5_MspDeInit 1 */
+
+  /* USER CODE END UART5_MspDeInit 1 */
+  }
+  else if(uartHandle->Instance==UART7)
+  {
+  /* USER CODE BEGIN UART7_MspDeInit 0 */
+
+  /* USER CODE END UART7_MspDeInit 0 */
+    /* Peripheral clock disable */
     __HAL_RCC_UART7_CLK_DISABLE();
+
+    /**UART7 GPIO Configuration
+    PE7     ------> UART7_RX
+    PE8     ------> UART7_TX
+    */
     HAL_GPIO_DeInit(GPIOE, GPIO_PIN_7|GPIO_PIN_8);
+
+    /* UART7 interrupt Deinit */
     HAL_NVIC_DisableIRQ(UART7_IRQn);
+  /* USER CODE BEGIN UART7_MspDeInit 1 */
+
+  /* USER CODE END UART7_MspDeInit 1 */
   }
   else if(uartHandle->Instance==USART1)
   {
+  /* USER CODE BEGIN USART1_MspDeInit 0 */
+
+  /* USER CODE END USART1_MspDeInit 0 */
+    /* Peripheral clock disable */
     __HAL_RCC_USART1_CLK_DISABLE();
+
+    /**USART1 GPIO Configuration
+    PA9     ------> USART1_TX
+    PA10     ------> USART1_RX
+    */
     HAL_GPIO_DeInit(GPIOA, GPIO_PIN_9|GPIO_PIN_10);
-    // 【修改】注销时一起关掉新增的 rx_dma
+
+    /* USART1 DMA DeInit */
     HAL_DMA_DeInit(uartHandle->hdmarx);
     HAL_DMA_DeInit(uartHandle->hdmatx);
+
+    /* USART1 interrupt Deinit */
     HAL_NVIC_DisableIRQ(USART1_IRQn);
+  /* USER CODE BEGIN USART1_MspDeInit 1 */
+
+  /* USER CODE END USART1_MspDeInit 1 */
   }
   else if(uartHandle->Instance==USART10)
   {
+  /* USER CODE BEGIN USART10_MspDeInit 0 */
+
+  /* USER CODE END USART10_MspDeInit 0 */
+    /* Peripheral clock disable */
     __HAL_RCC_USART10_CLK_DISABLE();
+
+    /**USART10 GPIO Configuration
+    PE2     ------> USART10_RX
+    PE3     ------> USART10_TX
+    */
     HAL_GPIO_DeInit(GPIOE, GPIO_PIN_2|GPIO_PIN_3);
-    // 【修改】清除了原本针对 10 号串口 DMA 的释放代码
+
+    /* USART10 DMA DeInit */
+    HAL_DMA_DeInit(uartHandle->hdmarx);
+
+    /* USART10 interrupt Deinit */
     HAL_NVIC_DisableIRQ(USART10_IRQn);
+  /* USER CODE BEGIN USART10_MspDeInit 1 */
+
+  /* USER CODE END USART10_MspDeInit 1 */
   }
 }
+
+/* USER CODE BEGIN 1 */
+
+
+
+
+/* USER CODE END 1 */

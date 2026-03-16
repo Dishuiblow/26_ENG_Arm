@@ -82,16 +82,16 @@ typedef __packed struct
     uint32_t last_time;							// 上次检测时间
     uint32_t lost_time;							// 设备离线时刻
     uint32_t work_time;							// 设备上线持续时间
-    uint16_t set_offline_time : 12; // 判定设备离线时间
-    uint16_t set_online_time : 12;	// 上线到稳定工作时间，该时间>=offline_time
+    uint16_t set_offline_time : 12;             // 判定设备离线时间
+    uint16_t set_online_time : 12;	            // 上线到稳定工作时间，该时间>=offline_time
     uint8_t enable : 1;							// 使能检测该设备
     uint8_t priority : 4;						// 设备检测优先级
-    uint8_t error_exist : 1;				// 设备异常，0：正常；1：异常。未知是由于数据紊乱还是设备离线引起
+    uint8_t error_exist : 1;				    // 设备异常，0：正常；1：异常。未知是由于数据紊乱还是设备离线引起
     uint8_t is_lost : 1;						// 设备离线，0：正常；1：离线
-    uint8_t data_is_error : 1;			// 判断数据错误
+    uint8_t data_is_error : 1;			        // 判断数据错误
 
-    fp32 frequency;									// 设备检测频率 ？
-    bool_t (*data_is_error_fun)(void);  // 判断数据是否出错 参考init中遥控器数据出错检测写法
+    fp32 frequency;							    // 设备检测频率
+    bool_t (*data_is_error_fun)(void);          // 判断数据是否出错 参考init中遥控器数据出错检测写法
     void (*solve_lost_fun)(void);
     void (*solve_data_error_fun)(void);
 } error_t;
@@ -99,16 +99,9 @@ typedef __packed struct
 
 
 extern void detect_task(void const *pvParameters);
-
-
 extern bool_t toe_is_error(uint8_t err);
-
-
 extern void detect_hook(uint8_t toe);
-
-
 extern const error_t *get_error_list_point(void);
-
-
 extern const error_t *get_REF_error_list_point(void);
+
 #endif

@@ -693,9 +693,7 @@ typedef __packed struct
 
 
 extern void init_referee_struct_data(void);
-
 extern void referee_data_solve(uint8_t *frame);
-
 extern void common_data_send(void);
 
 extern void char_send(const uint16_t *team_client_id);

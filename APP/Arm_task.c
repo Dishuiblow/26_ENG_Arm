@@ -1,122 +1,190 @@
-#include "Arm_Task.h"
+#include "Arm_task.h"
 #include "fdcan.h"
 #include "cmsis_os.h"      
 #include "dm4310_drv.h"
 #include "math.h" 
-#include "stdlib.h"        // 【修复】引入 stdlib.h，解决 abs() 隐式声明警告
+#include "stdlib.h"        
 #include "dynamic.h"       
 #include "referee.h"
+#include "dt7_remote_read.h"
 
-// =========================================================
-// 全局变量区
-// =========================================================
+//修正1：宏定义移到文件开头（规范语序）
+#define CUSTOM_ANGLE_SCALE 0.002f    
+#define J1_RAD_APP 1.5f
+#define J2_RAD_APP 1.5f
+#define J3_RAD_APP 1.5f
+#define J4_RAD_APP 1.5f
+#define J5_RAD_APP 1.5f
+#define J6_RAD_APP 1.5f
+//// 仅调整语法结构，不改变变量初始化方式
+const RC_ctrl_t *rc_data = NULL;
+//const RC_ctrl_t *rc_data = get_dt7_remote_control_point();
+
+static uint8_t last_shift_state=0;
 Arm_t my_arm;
 
-// 【修复】定义一个“傀儡”变量，专门用来应付 usb_protocol.c 的编译报错。
-// 我们在下方的实际控制中完全不用它，从而彻底隔离 USB 的干扰！
 float usb_target_pos[6] = {0}; 
-
-// 这是我们图传链路真正使用的、纯净的控制目标变量
 float arm_target_pos[6] = {0}; 
 static float current_filtered_target[6] = {0};
+//// ? 修正2：补全结尾分号
+//uint8_t current_shift_state = (rc_data->key.v & KEY_PRESSED_OFFSET_SHIFT);
+uint8_t current_shift_state = 0;
 
-// 自定义控制器增量缩放系数（灵敏度）
-#define CUSTOM_ANGLE_SCALE 0.002f    
-
-// 关节限位保护（测试时暂设为全0，代表不限位）
 int MAX_LIMIT[6] = {0};
 int MIN_LIMIT[6] = {0};
 
-// ---------------------------------------------------------
-// 机械臂初始化
-// ---------------------------------------------------------
-void Arm_Init(void)
-{
-    // 初始化6个 DM4310 电机并使能进入 MIT 控制模式
+fp32 arm_target_angle = 0.0f;
+
+uint8_t arm_toggle_state = 0;
+
+
+void Arm_Init(void){
     for(int i=0; i<6; i++) {
-        // 【修复】加上 (Joint_Motor_t *) 强制类型转换，解决类型不匹配警告
         joint_motor_init((Joint_Motor_t *)&my_arm.joints[i], i+1, MIT_MODE); 
         enable_motor_mode(&hfdcan1, my_arm.joints[i].para.id, my_arm.joints[i].mode);
+	for(int i=0;i<6;i++)		
+			{my_arm.joints[i].target_pos=0;}
+			
+			
+			 rc_data=get_dt7_remote_control_point();
         osDelay(10);
     }
 }
 
-// =========================================================
-// 【零 USB 干扰版】仅 006 号电机接收图传响应
-// =========================================================
-void Arm_Task(void const * argument)
+void ARM_Set_Control()
 {
-    osDelay(1000); // 上电等待底盘及驱动就绪
-    Arm_Init();    // 上电使能所有电机
-    
-    // 专为 006 号电机（数组下标为 5）设置的状态变量
-    static uint16_t last_custom_angle_5 = 0; 
-    static uint8_t is_first_custom_data = 1;
-
-    // 初始化时获取当前位置，防飞车
-    for(int i=0; i<6; i++) {
-        arm_target_pos[i] = my_arm.joints[i].para.pos / GEAR_RATIO;
-        current_filtered_target[i] = arm_target_pos[i];
-    }
-
-    while(1)
-    {
-        // -------------------------------------------------------------
-        // 解析 006 号电机的图传数据 (数组下标 5，位于 custom_robot_data.data 第10和11字节)
-        // -------------------------------------------------------------
-        uint16_t current_custom_angle_5 = REF.custom_robot_data.data[5*2] | 
-                                         (REF.custom_robot_data.data[5*2 + 1] << 8);
-        
-        // 获取有效初值（防上电跳变）
-        if (is_first_custom_data && current_custom_angle_5 != 0) {
-            last_custom_angle_5 = current_custom_angle_5;
-            is_first_custom_data = 0;
-        }
-
-        // -------------------------------------------------------------
-        // 计算 006 号增量逻辑
-        // -------------------------------------------------------------
-        if (!is_first_custom_data) 
-        {
-            // 校验总线舵机数据是否在合法范围内 0500~2500
-            if (current_custom_angle_5 >= 500 && current_custom_angle_5 <= 2500 &&
-                last_custom_angle_5 >= 500 && last_custom_angle_5 <= 2500) 
-            {
-                int16_t delta = (int16_t)current_custom_angle_5 - (int16_t)last_custom_angle_5;
-                if (abs(delta) > 1) { // 死区过滤
-                    arm_target_pos[5] += (float)delta * CUSTOM_ANGLE_SCALE;
-                }
-            }
-            last_custom_angle_5 = current_custom_angle_5;
-        }
-
-        // 保护与滤波（仅针对 006 号）
-        if(MAX_LIMIT[5] != MIN_LIMIT[5]) { 
-            if(arm_target_pos[5] > MAX_LIMIT[5]) arm_target_pos[5] = MAX_LIMIT[5];
-            if(arm_target_pos[5] < MIN_LIMIT[5]) arm_target_pos[5] = MIN_LIMIT[5];
-        }
-        
-        current_filtered_target[5] = current_filtered_target[5] * 0.85f + arm_target_pos[5] * 0.15f;
-
-        // -------------------------------------------------------------
-        // 发送 CAN 控制指令
-        // -------------------------------------------------------------
-        for(int i=0; i<6; i++) 
-        {
-            if (i == 5) // 如果是第 6 号电机 (CAN ID = 6)
-            {
-                float motor_pos_ref = current_filtered_target[5] * GEAR_RATIO;
-                float kp = 6.0f; 
-                float kd = 1.2f; 
-                mit_ctrl_4310(&hfdcan1, 6, motor_pos_ref, 0, kp, kd, 0.0f);
-            }
-            else // 其余 0~4 号电机
-            {
-                // 发送 0 力矩瘫软，完全不干预
-                mit_ctrl_4310(&hfdcan1, i+1, 0, 0, 0, 0, 0); 
-            }
-        }
-                
-        osDelay(2);
-    }
+	if(rc_data->key.v&KEY_PRESSED_OFFSET_Q)
+	{my_arm.joints[0].target_pos+=J1_RAD_APP;}
+else if(rc_data->key.v&KEY_PRESSED_OFFSET_A)	
+{
+	my_arm.joints[0].target_pos-=J1_RAD_APP;
 }
+
+if(rc_data->key.v&KEY_PRESSED_OFFSET_W)
+	{my_arm.joints[1].target_pos+=J2_RAD_APP;}
+else if(rc_data->key.v&KEY_PRESSED_OFFSET_S)	
+{
+	my_arm.joints[1].target_pos-=J2_RAD_APP;
+}
+
+if(rc_data->key.v&KEY_PRESSED_OFFSET_E)
+	{my_arm.joints[2].target_pos+=J3_RAD_APP;}
+else if(rc_data->key.v&KEY_PRESSED_OFFSET_D)	
+{
+	my_arm.joints[2].target_pos-=J3_RAD_APP;
+}
+
+if(rc_data->key.v&KEY_PRESSED_OFFSET_R)
+	{my_arm.joints[3].target_pos+=J4_RAD_APP;}
+else if(rc_data->key.v&KEY_PRESSED_OFFSET_F)	
+{
+	my_arm.joints[3].target_pos-=J4_RAD_APP;
+}
+
+if(rc_data->key.v&KEY_PRESSED_OFFSET_SHIFT)
+	{my_arm.joints[4].target_pos+=J5_RAD_APP;}
+else if(rc_data->key.v&KEY_PRESSED_OFFSET_CTRL)	
+{
+	my_arm.joints[4].target_pos-=J5_RAD_APP;
+}
+if(rc_data->key.v&KEY_PRESSED_OFFSET_Z)
+	{my_arm.joints[5].target_pos+=J6_RAD_APP;}
+else if(rc_data->key.v&KEY_PRESSED_OFFSET_X)	
+{
+	my_arm.joints[5].target_pos-=J6_RAD_APP;
+}
+//加一个限幅函数
+	
+}
+
+
+int i_test = 0;
+
+extern  int i_test1;
+void ARM_Task(void const * argument){
+    osDelay(1000);
+    Arm_Init();
+	  ARM_Set_Control();
+//在这里添加发送函数
+	//mit_ctrl_4310（0，0，0，0，my_arm.joints[0].target_pos）
+	//mit_ctrl_4310（）
+	
+	
+	
+//    //rc_data = get_dt7_remote_control_point();  //增加
+//    
+//    static uint16_t last_custom_angle_5 = 0; 
+//    static uint8_t is_first_custom_data = 1;
+
+//    for (;;){
+//        i_test1 ++;
+//        i_test++;
+//          osDelay(10);
+////        current_shift_state = (rc_data->key.v & KEY_PRESSED_OFFSET_SHIFT);
+////        // 第一部分：原if切换逻辑
+////        if (current_shift_state == 1 && last_shift_state == 0) {
+////            arm_toggle_state = !arm_toggle_state;
+////            if (arm_toggle_state) {
+////                // 发送角度1 给总线舵机
+////            } 
+////            else {
+////                // 发送角度2 给总线舵机
+////            }
+////        }
+////        last_shift_state = current_shift_state;
+           ;
+
+////        // 第二部分：原按键控制逻辑
+////        if (rc_data->key.v & KEY_PRESSED_OFFSET_W) {
+////            arm_target_angle += 1.5f;
+////        } else if (rc_data->key.v & KEY_PRESSED_OFFSET_S) {
+////            arm_target_angle -= 1.5f;
+////        }
+
+////        // 第三部分：原for循环逻辑
+////        for(int i=0; i<6; i++) {
+////            arm_target_pos[i] = my_arm.joints[i].para.pos / GEAR_RATIO;
+////            current_filtered_target[i] = arm_target_pos[i];
+////        }
+
+////        // 第四部分：原while(1)内的总线舵机、电机控制逻辑
+////        uint16_t current_custom_angle_5 = REF.custom_robot_data.data[5*2] | 
+////                                         (REF.custom_robot_data.data[5*2 + 1] << 8);
+////        
+////        if (is_first_custom_data && current_custom_angle_5 != 0) {
+////            last_custom_angle_5 = current_custom_angle_5;
+////            is_first_custom_data = 0;
+////        }
+
+////        if (!is_first_custom_data){
+////            if (current_custom_angle_5 >= 500 && current_custom_angle_5 <= 2500 &&
+////                     last_custom_angle_5 >= 500 && last_custom_angle_5 <= 2500){ 
+////                int16_t delta = (int16_t)current_custom_angle_5 - (int16_t)last_custom_angle_5;
+////                if (abs(delta) > 1)  arm_target_pos[5] += (float)delta * CUSTOM_ANGLE_SCALE;
+////                
+////            }
+////            last_custom_angle_5 = current_custom_angle_5;
+////        }
+
+////        if (MAX_LIMIT[5] != MIN_LIMIT[5]) { 
+////            if(arm_target_pos[5] > MAX_LIMIT[5]) arm_target_pos[5] = MAX_LIMIT[5];
+////            if(arm_target_pos[5] < MIN_LIMIT[5]) arm_target_pos[5] = MIN_LIMIT[5];
+////        }
+////        
+////        current_filtered_target[5] = current_filtered_target[5] * 0.85f + arm_target_pos[5] * 0.15f;
+
+////        for (int i=0; i<6; i++){
+////            if (i == 5){
+////                float motor_pos_ref = current_filtered_target[5] * GEAR_RATIO;
+////                float kp = 6.0f; 
+////                float kd = 1.2f; 
+////                mit_ctrl_4310(&hfdcan1, 6, motor_pos_ref, 0, kp, kd, 0.0f);
+////            }
+////            else  mit_ctrl_4310(&hfdcan1, i+1, 0, 0, 0, 0, 0); 
+////            
+////        }
+//                
+//        osDelay(2);
+    }
+//}
+

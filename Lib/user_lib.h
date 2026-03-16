@@ -16,8 +16,7 @@
 #include "main.h"
 #include "cmsis_os.h"
 
-enum
-{
+enum{
     CHASSIS_DEBUG = 1,
     GIMBAL_DEBUG,
     INS_DEBUG,

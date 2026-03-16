@@ -4,7 +4,7 @@
 #include "CRC8_CRC16.h"
 #include "protocol.h"
 
-extern UART_HandleTypeDef huart7;
+extern UART_HandleTypeDef huart1;
 
 REF_t REF;
 
@@ -15,31 +15,22 @@ void init_referee_struct_data(void)
 }
 
 /*通过串口读取裁判系统数据*/
-void referee_data_solve(uint8_t *frame)
-{
+void referee_data_solve(uint8_t *frame){
     uint16_t cmd_id = 0;
-
     uint8_t index = 0;
-
     memcpy(&REF.referee_receive_header, frame, sizeof(frame_header_struct_t));// 储存帧头数据
-
     index += sizeof(frame_header_struct_t);
-
     memcpy(&cmd_id, frame + index, sizeof(uint16_t));
-	
     index += sizeof(uint16_t);
 
-    switch (cmd_id)
-    {
-        case ID_game_state://0x0001
-        {
-            memcpy(&REF.game_status, frame + index, sizeof(ext_game_status_t));
-        }
-        break;
-        case ID_game_result://0x0002
-        {
+    switch (cmd_id){
+        case ID_game_state:{//0x0001
+                memcpy(&REF.game_status, frame + index, sizeof(ext_game_status_t));
+            }
+            break;
+        case ID_game_result:{//0x0002
             memcpy(&REF.game_result, frame + index, sizeof(ext_game_result_t));
-        }
+            }
         break;
         case ID_game_robot_survivors://0x0003
         {
@@ -51,9 +42,10 @@ void referee_data_solve(uint8_t *frame)
 				/* 0x0005:	ICRA增益状态*/
 
         case ID_event_data://0x0101
-          {
-              memcpy(&REF.field_event, frame + index, sizeof(ext_event_data_t));
-          }
+        {
+            
+            memcpy(&REF.field_event, frame + index, sizeof(ext_event_data_t));
+        }
         break;
 				
         case ID_supply_warm://0x0104
@@ -494,7 +486,7 @@ void data_int(int_data_struct_t *int_data, // 数据段内容位数
   */
 void uart_send_message(uint8_t *string, uint16_t length)
 {
-	HAL_UART_Transmit(&huart7, string, length, 100);
+	HAL_UART_Transmit(&huart1, string, length, 100);
 }
 
 

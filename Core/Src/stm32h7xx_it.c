@@ -6,7 +6,7 @@
   ******************************************************************************
   * @attention
   *
-  * Copyright (c) 2024 STMicroelectronics.
+  * Copyright (c) 2026 STMicroelectronics.
   * All rights reserved.
   *
   * This software is licensed under terms that can be found in the LICENSE file
@@ -22,6 +22,18 @@
 #include "stm32h7xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+
+#include "referee_usart_task.h"
+#include "cmsis_os.h"
+
+#include "bsp_usart.h"
+#include "detect_task.h"
+
+#include "CRC8_CRC16.h"
+#include "fifo.h"
+#include "protocol.h"
+#include "referee.h"
+#include "detect_task.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -61,16 +73,18 @@ extern FDCAN_HandleTypeDef hfdcan3;
 extern DMA_HandleTypeDef hdma_spi2_rx;
 extern DMA_HandleTypeDef hdma_spi2_tx;
 extern SPI_HandleTypeDef hspi2;
-extern TIM_HandleTypeDef htim2;
-extern PCD_HandleTypeDef hpcd_USB_OTG_HS;
-//extern DMA_HandleTypeDef hdma_usart10_rx;
-//extern DMA_HandleTypeDef hdma_usart10_tx;
-extern UART_HandleTypeDef huart7;
-extern UART_HandleTypeDef huart10;
 extern DMA_HandleTypeDef hdma_usart1_rx;
 extern DMA_HandleTypeDef hdma_usart1_tx;
+extern DMA_HandleTypeDef hdma_usart10_rx;
+extern UART_HandleTypeDef huart5;
+extern UART_HandleTypeDef huart7;
+extern UART_HandleTypeDef huart1;
+extern UART_HandleTypeDef huart10;
+extern TIM_HandleTypeDef htim1;
 
 /* USER CODE BEGIN EV */
+extern uint8_t usart1_buf[2][USART_RX_BUF_LENGHT];
+extern fifo_s_t referee_fifo;
 
 /* USER CODE END EV */
 
@@ -80,19 +94,13 @@ extern DMA_HandleTypeDef hdma_usart1_tx;
 /**
   * @brief This function handles Non maskable interrupt.
   */
-	
-	
-void OTG_HS_IRQHandler(void)
-{
-	HAL_PCD_IRQHandler(&hpcd_USB_OTG_HS);
-}
 void NMI_Handler(void)
 {
   /* USER CODE BEGIN NonMaskableInt_IRQn 0 */
 
   /* USER CODE END NonMaskableInt_IRQn 0 */
   /* USER CODE BEGIN NonMaskableInt_IRQn 1 */
-  while (1)
+   while (1)
   {
   }
   /* USER CODE END NonMaskableInt_IRQn 1 */
@@ -184,68 +192,69 @@ void DebugMon_Handler(void)
 void DMA1_Stream0_IRQHandler(void)
 {
   /* USER CODE BEGIN DMA1_Stream0_IRQn 0 */
+
   /* USER CODE END DMA1_Stream0_IRQn 0 */
   HAL_DMA_IRQHandler(&hdma_usart1_rx);
   /* USER CODE BEGIN DMA1_Stream0_IRQn 1 */
+
   /* USER CODE END DMA1_Stream0_IRQn 1 */
 }
+
 /**
   * @brief This function handles DMA1 stream1 global interrupt.
   */
 void DMA1_Stream1_IRQHandler(void)
 {
   /* USER CODE BEGIN DMA1_Stream1_IRQn 0 */
+
   /* USER CODE END DMA1_Stream1_IRQn 0 */
-  HAL_DMA_IRQHandler(&hdma_usart1_tx); // <--- 改成 usart1_tx
+  HAL_DMA_IRQHandler(&hdma_usart1_tx);
   /* USER CODE BEGIN DMA1_Stream1_IRQn 1 */
+
   /* USER CODE END DMA1_Stream1_IRQn 1 */
 }
 
 /**
   * @brief This function handles DMA1 stream2 global interrupt.
   */
-
-
-
 void DMA1_Stream2_IRQHandler(void)
 {
   /* USER CODE BEGIN DMA1_Stream2_IRQn 0 */
 
   /* USER CODE END DMA1_Stream2_IRQn 0 */
-//  HAL_DMA_IRQHandler(&hdma_usart10_tx);
+  HAL_DMA_IRQHandler(&hdma_usart10_rx);
   /* USER CODE BEGIN DMA1_Stream2_IRQn 1 */
 
   /* USER CODE END DMA1_Stream2_IRQn 1 */
 }
 
-
 /**
-  * @brief This function handles UART7 global interrupt.
+  * @brief This function handles DMA1 stream3 global interrupt.
   */
-void UART7_IRQHandler(void)
+void DMA1_Stream3_IRQHandler(void)
 {
-  /* USER CODE BEGIN UART7_IRQn 0 */
+  /* USER CODE BEGIN DMA1_Stream3_IRQn 0 */
 
-  /* USER CODE END UART7_IRQn 0 */
-  HAL_UART_IRQHandler(&huart7);
-  /* USER CODE BEGIN UART7_IRQn 1 */
+  /* USER CODE END DMA1_Stream3_IRQn 0 */
+  HAL_DMA_IRQHandler(&hdma_spi2_rx);
+  /* USER CODE BEGIN DMA1_Stream3_IRQn 1 */
 
-  /* USER CODE END UART7_IRQn 1 */
+  /* USER CODE END DMA1_Stream3_IRQn 1 */
 }
 
 /**
-  * @brief This function handles USART10 global interrupt.
+  * @brief This function handles DMA1 stream4 global interrupt.
   */
-//void USART10_IRQHandler(void)
-//{
-//  /* USER CODE BEGIN USART10_IRQn 0 */
+void DMA1_Stream4_IRQHandler(void)
+{
+  /* USER CODE BEGIN DMA1_Stream4_IRQn 0 */
 
-//  /* USER CODE END USART10_IRQn 0 */
-//  HAL_UART_IRQHandler(&huart10);
-//  /* USER CODE BEGIN USART10_IRQn 1 */
+  /* USER CODE END DMA1_Stream4_IRQn 0 */
+  HAL_DMA_IRQHandler(&hdma_spi2_tx);
+  /* USER CODE BEGIN DMA1_Stream4_IRQn 1 */
 
-//  /* USER CODE END USART10_IRQn 1 */
-//}
+  /* USER CODE END DMA1_Stream4_IRQn 1 */
+}
 
 /**
   * @brief This function handles FDCAN1 interrupt 0.
@@ -276,17 +285,45 @@ void FDCAN2_IT0_IRQHandler(void)
 }
 
 /**
-  * @brief This function handles TIM2 global interrupt.
+  * @brief This function handles FDCAN1 interrupt 1.
   */
-void TIM2_IRQHandler(void)
+void FDCAN1_IT1_IRQHandler(void)
 {
-  /* USER CODE BEGIN TIM2_IRQn 0 */
+  /* USER CODE BEGIN FDCAN1_IT1_IRQn 0 */
 
-  /* USER CODE END TIM2_IRQn 0 */
-  HAL_TIM_IRQHandler(&htim2);
-  /* USER CODE BEGIN TIM2_IRQn 1 */
+  /* USER CODE END FDCAN1_IT1_IRQn 0 */
+  HAL_FDCAN_IRQHandler(&hfdcan1);
+  /* USER CODE BEGIN FDCAN1_IT1_IRQn 1 */
 
-  /* USER CODE END TIM2_IRQn 1 */
+  /* USER CODE END FDCAN1_IT1_IRQn 1 */
+}
+
+/**
+  * @brief This function handles FDCAN2 interrupt 1.
+  */
+void FDCAN2_IT1_IRQHandler(void)
+{
+  /* USER CODE BEGIN FDCAN2_IT1_IRQn 0 */
+
+  /* USER CODE END FDCAN2_IT1_IRQn 0 */
+  HAL_FDCAN_IRQHandler(&hfdcan2);
+  /* USER CODE BEGIN FDCAN2_IT1_IRQn 1 */
+
+  /* USER CODE END FDCAN2_IT1_IRQn 1 */
+}
+
+/**
+  * @brief This function handles TIM1 update interrupt.
+  */
+void TIM1_UP_IRQHandler(void)
+{
+  /* USER CODE BEGIN TIM1_UP_IRQn 0 */
+
+  /* USER CODE END TIM1_UP_IRQn 0 */
+  HAL_TIM_IRQHandler(&htim1);
+  /* USER CODE BEGIN TIM1_UP_IRQn 1 */
+
+  /* USER CODE END TIM1_UP_IRQn 1 */
 }
 
 /**
@@ -304,6 +341,74 @@ void SPI2_IRQHandler(void)
 }
 
 /**
+  * @brief This function handles USART1 global interrupt.
+  */
+void USART1_IRQHandler(void)
+{
+  /* USER CODE BEGIN USART1_IRQn 0 */
+    if(USART1->ISR & UART_FLAG_IDLE){
+      __HAL_UART_CLEAR_IDLEFLAG(&huart1);
+
+      uint16_t this_time_rx_len = USART_RX_BUF_LENGHT - __HAL_DMA_GET_COUNTER(huart1.hdmarx);
+      
+      __HAL_DMA_DISABLE(huart1.hdmarx);
+      SCB_InvalidateDCache_by_Addr((uint32_t *)usart1_buf, USART_RX_BUF_LENGHT);
+      
+      fifo_s_puts(&referee_fifo, (char*)usart1_buf, this_time_rx_len);
+      detect_hook(REFEREE_TOE);
+        
+      __HAL_DMA_ENABLE(huart1.hdmarx);
+  }
+  /* USER CODE END USART1_IRQn 0 */
+  HAL_UART_IRQHandler(&huart1);
+  /* USER CODE BEGIN USART1_IRQn 1 */
+
+  /* USER CODE END USART1_IRQn 1 */
+}
+
+/**
+  * @brief This function handles UART5 global interrupt.
+  */
+void UART5_IRQHandler(void)
+{
+  /* USER CODE BEGIN UART5_IRQn 0 */
+
+  /* USER CODE END UART5_IRQn 0 */
+  HAL_UART_IRQHandler(&huart5);
+  /* USER CODE BEGIN UART5_IRQn 1 */
+
+  /* USER CODE END UART5_IRQn 1 */
+}
+
+/**
+  * @brief This function handles UART7 global interrupt.
+  */
+void UART7_IRQHandler(void)
+{
+  /* USER CODE BEGIN UART7_IRQn 0 */
+
+  /* USER CODE END UART7_IRQn 0 */
+  HAL_UART_IRQHandler(&huart7);
+  /* USER CODE BEGIN UART7_IRQn 1 */
+
+  /* USER CODE END UART7_IRQn 1 */
+}
+
+/**
+  * @brief This function handles USART10 global interrupt.
+  */
+__weak void USART10_IRQHandler(void)
+{
+  /* USER CODE BEGIN USART10_IRQn 0 */
+
+  /* USER CODE END USART10_IRQn 0 */
+  HAL_UART_IRQHandler(&huart10);
+  /* USER CODE BEGIN USART10_IRQn 1 */
+
+  /* USER CODE END USART10_IRQn 1 */
+}
+
+/**
   * @brief This function handles FDCAN3 interrupt 0.
   */
 void FDCAN3_IT0_IRQHandler(void)
@@ -315,6 +420,20 @@ void FDCAN3_IT0_IRQHandler(void)
   /* USER CODE BEGIN FDCAN3_IT0_IRQn 1 */
 
   /* USER CODE END FDCAN3_IT0_IRQn 1 */
+}
+
+/**
+  * @brief This function handles FDCAN3 interrupt 1.
+  */
+void FDCAN3_IT1_IRQHandler(void)
+{
+  /* USER CODE BEGIN FDCAN3_IT1_IRQn 0 */
+
+  /* USER CODE END FDCAN3_IT1_IRQn 0 */
+  HAL_FDCAN_IRQHandler(&hfdcan3);
+  /* USER CODE BEGIN FDCAN3_IT1_IRQn 1 */
+
+  /* USER CODE END FDCAN3_IT1_IRQn 1 */
 }
 
 /* USER CODE BEGIN 1 */

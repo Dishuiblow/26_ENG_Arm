@@ -17,6 +17,9 @@
 #define J5_MIN_RAD -1.570796F
 #define J5_MAX_RAD 1.570796f
 
+
+
+
 // --- 机械臂尺寸参数 ---
 #define l1 0.06f    //!连杆1长度
 #define l2 0.3f     //!连杆2长度
@@ -51,6 +54,9 @@ typedef enum
     ARM_STATE_ERROR             // 错误保护
 } Arm_State_e;
 
+
+
+
 //==============================================补充定义================================================================================//
 #define MAX_SERVO_NUM 6
 #define HOMING_STEP 6
@@ -73,10 +79,9 @@ typedef struct {
 	Para para;
     // 可根据实际需求添加更多字段，如加速度、力矩限制、温度等
 } Joint_t;
-//==============================================补充定义================================================================================//
+////==============================================补充定义================================================================================//
 
-typedef struct
-{
+typedef struct{
     Joint_t joints[MAX_SERVO_NUM]; // 关节电机对象 (需在电机驱动中定义)
     Arm_State_e current_state;     // 当前状态
     uint8_t start_flag;            // 启动标志
@@ -86,10 +91,9 @@ typedef struct
 // 声明外部变量
 extern Arm_t my_arm;
 
-// --- 函数声明 ---
+//// --- 函数声明 ---
 void Arm_Task(void const * argument);
 void Arm_Init(void);
 
-// void Arm_GoHome_Slowly(void); // 【已删除】旧的阻塞式归零函数已废弃
 
 #endif

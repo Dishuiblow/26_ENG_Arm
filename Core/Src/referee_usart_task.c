@@ -20,11 +20,14 @@
 
 #include "bsp_usart.h"
 #include "detect_task.h"
-
+#include "referee.h"
 #include "CRC8_CRC16.h"
 #include "fifo.h"
 #include "protocol.h"
 #include "referee.h"
+
+
+
 
 /**
   * @brief          单字节解包
@@ -32,8 +35,7 @@
   * @retval         none
   */
 static void referee_unpack_fifo_data(void);
-
-extern UART_HandleTypeDef huart10;
+extern UART_HandleTypeDef huart1;
 
 // 将原本的 usart6_buf 修改为 usart10_buf，保持命名一致性
 uint8_t usart1_buf[2][USART_RX_BUF_LENGHT];
@@ -55,7 +57,7 @@ void referee_usart_task(void const * argument)
     fifo_s_init(&referee_fifo, referee_fifo_buf, REFEREE_FIFO_BUF_LENGTH);
     
     // 初始化 USART1 的双缓冲 DMA 接收
-    usart1_init(usart1_buf[0], usart1_buf[1], USART_RX_BUF_LENGHT);
+    //usart1_init(usart1_buf[0], usart1_buf[1], USART_RX_BUF_LENGHT);
 
     while(1)
     {
@@ -174,52 +176,34 @@ void referee_unpack_fifo_data(void)
   }
 }
 
-// 串口10全局中断处理函数，处理空闲中断以实现不定长双缓冲接收
-void USART10_IRQHandler(void)
-{ 
-    // H7芯片判定空闲中断使用的是 ISR 寄存器
-    if(USART10->ISR & UART_FLAG_IDLE)
-    {
-        // H7 清除空闲中断标志位的宏
-        __HAL_UART_CLEAR_IDLEFLAG(&huart10);
+///* 在 stm32h7xx_it.c 中 */
+//void USART1_IRQHandler(void){
+//  /* USER CODE BEGIN USART1_IRQn 0 */
+//  if(USART1->ISR & UART_FLAG_IDLE){
+//      __HAL_UART_CLEAR_IDLEFLAG(&huart1);
+//      
+//      // 计算本次接收长度
+//      uint16_t this_time_rx_len = USART_RX_BUF_LENGHT - __HAL_DMA_GET_COUNTER(huart1.hdmarx);
+//      
+//      // 停止 DMA 以防止处理数据时新数据进来覆盖 (可选，视实时性要求)
+//      __HAL_DMA_DISABLE(huart1.hdmarx);
+//      // 刷 Cache (H7 必须)
+//      SCB_InvalidateDCache_by_Addr((uint32_t *)usart1_buf, USART_RX_BUF_LENGHT);
+//      
+//      // 写入 FIFO
+//      fifo_s_puts(&referee_fifo, (char*)usart1_buf, this_time_rx_len);
+//      detect_hook(REFEREE_TOE);
+//      
+//      // 重新设置 DMA 计数并开启 (因为是 Circular 模式，其实只需 Enable 即可，NDTR会自动重载)
+//      // 注意：如果不 Disable，这里甚至不需要重新 Enable，直接清标志走人也行，看你对数据完整性的要求
+//      __HAL_DMA_ENABLE(huart1.hdmarx);
+//  }
 
-        static uint16_t this_time_rx_len = 0;
+//  /* USER CODE END USART1_IRQn 0 */
+//  
+//  HAL_UART_IRQHandler(&huart1);
 
-        // 获取 DMA 实例指针并强转，判断当前使用的是哪个缓冲区
-        if ((((DMA_Stream_TypeDef *)huart10.hdmarx->Instance)->CR & DMA_SxCR_CT) == RESET)
-        {
-            __HAL_DMA_DISABLE(huart10.hdmarx);
-            this_time_rx_len = USART_RX_BUF_LENGHT - __HAL_DMA_GET_COUNTER(huart10.hdmarx);
-            __HAL_DMA_SET_COUNTER(huart10.hdmarx, USART_RX_BUF_LENGHT);
-            ((DMA_Stream_TypeDef *)huart10.hdmarx->Instance)->CR |= DMA_SxCR_CT;
-            __HAL_DMA_ENABLE(huart10.hdmarx);
-            
-            // =======================================================
-            // 【极其致命：必须加上这句！】强制让 CPU 清除缓存，去物理内存读最新数据
-            SCB_InvalidateDCache_by_Addr((uint32_t *)usart1_buf[0], USART_RX_BUF_LENGHT);
-            // =======================================================
-            
-            // 写入 FIFO 时保证传递正确的地址
-            fifo_s_puts(&referee_fifo, (char*)usart1_buf[0], this_time_rx_len);
-            // 未进中断该函数就会停止计时，用以判断设备离线
-            detect_hook(REFEREE_TOE);
-        }
-        else
-        {
-            __HAL_DMA_DISABLE(huart10.hdmarx);
-            this_time_rx_len = USART_RX_BUF_LENGHT - __HAL_DMA_GET_COUNTER(huart10.hdmarx);
-            __HAL_DMA_SET_COUNTER(huart10.hdmarx, USART_RX_BUF_LENGHT);
-            ((DMA_Stream_TypeDef *)huart10.hdmarx->Instance)->CR &= ~(DMA_SxCR_CT);
-            __HAL_DMA_ENABLE(huart10.hdmarx);
-            
-            // =======================================================
-            // 【极其致命：必须加上这句！】强制让 CPU 清除缓存，去物理内存读最新数据
-            SCB_InvalidateDCache_by_Addr((uint32_t *)usart1_buf[1], USART_RX_BUF_LENGHT);
-            // =======================================================
-            
-            fifo_s_puts(&referee_fifo, (char*)usart1_buf[1], this_time_rx_len);
-            // 未进中断该函数就会停止计时，用以判断设备离线
-            detect_hook(REFEREE_TOE);
-        }
-    }
-}
+//  /* USER CODE BEGIN USART1_IRQn 1 */
+
+//  /* USER CODE END USART1_IRQn 1 */
+//}

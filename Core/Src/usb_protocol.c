@@ -19,8 +19,7 @@ void Execute_Command(uint8_t cmd, uint8_t* data, uint8_t len);
 void USB_Send_Motor_Status(float* data_array);
 
 // --- USB 接收回调 ---
-void User_USB_Receive_Callback(uint8_t* Buf, uint32_t *Len)
-{
+void User_USB_Receive_Callback(uint8_t* Buf, uint32_t *Len){
     uint32_t len = *Len;
     for(uint32_t i=0; i<len; i++) {
         rx_fifo[fifo_head] = Buf[i];
@@ -87,7 +86,7 @@ void Execute_Command(uint8_t cmd, uint8_t* data, uint8_t len) {
             }
             break;
         case 0x05: // Enable
-            Arm_Init();
+            //Arm_Init();
             my_arm.current_state = ARM_STATE_GRAVITY_COMP;
             break;
         case 0x06: // Lock Current

@@ -7,7 +7,7 @@
   ******************************************************************************
   * @attention
   *
-  * Copyright (c) 2024 STMicroelectronics.
+  * Copyright (c) 2026 STMicroelectronics.
   * All rights reserved.
   *
   * This software is licensed under terms that can be found in the LICENSE file
@@ -31,7 +31,7 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "bsp_dwt.h"
+
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -73,6 +73,8 @@ void Error_Handler(void);
 #define GYRO_INT_GPIO_Port GPIOE
 #define CLK_Pin GPIO_PIN_13
 #define CLK_GPIO_Port GPIOE
+#define key_Pin GPIO_PIN_15
+#define key_GPIO_Port GPIOA
 
 /* USER CODE BEGIN Private defines */
 typedef float fp32;

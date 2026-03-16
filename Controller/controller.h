@@ -45,8 +45,10 @@
 #define PM 2
 #define PB 3
 
-typedef __packed struct
-{
+#include "user_lib.h"
+extern float float_constrain(float Value, float minValue, float maxValue);
+
+typedef __packed struct{
     float KpFuzzy;
     float KiFuzzy;
     float KdFuzzy;
@@ -76,8 +78,7 @@ void Fuzzy_Rule_Init(FuzzyRule_t *fuzzyRule, float (*fuzzyRuleKp)[7], float (*fu
 void Fuzzy_Rule_Implementation(FuzzyRule_t *fuzzyRule, float measure, float ref);
 
 /******************************* PID CONTROL *********************************/
-typedef enum pid_Improvement_e
-{
+typedef enum pid_Improvement_e{
     NONE = 0X00,                        //0000 0000
     Integral_Limit = 0x01,              //0000 0001
     Derivative_On_Measurement = 0x02,   //0000 0010
@@ -89,20 +90,17 @@ typedef enum pid_Improvement_e
     ErrorHandle = 0x80,                 //1000 0000
 } PID_Improvement_e;
 
-typedef enum errorType_e
-{
+typedef enum errorType_e{
     PID_ERROR_NONE = 0x00U,
     Motor_Blocked = 0x01U
 } ErrorType_e;
 
-typedef __packed struct
-{
+typedef __packed struct{
     uint64_t ERRORCount;
     ErrorType_e ERRORType;
 } PID_ErrorHandler_t;
 
-typedef __packed struct pid_t
-{
+typedef __packed struct pid_t{
     float Ref;
     float Kp;
     float Ki;
@@ -170,8 +168,7 @@ void PID_Init(
 float PID_Calculate(PID_t *pid, float measure, float ref);
 
 /*************************** FEEDFORWARD CONTROL *****************************/
-typedef __packed struct
-{
+typedef __packed struct{
     float c[3]; // G(s) = 1/(c2s^2 + c1s + c0)
 
     float Ref;
@@ -209,8 +206,7 @@ void Feedforward_Init(
 float Feedforward_Calculate(Feedforward_t *ffc, float ref);
 
 /************************* LINEAR DISTURBANCE OBSERVER *************************/
-typedef __packed struct
-{
+typedef __packed struct{
     float c[3]; // G(s) = 1/(c2s^2 + c1s + c0)
 
     float Measure;

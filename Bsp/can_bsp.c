@@ -13,18 +13,16 @@ uint8_t g_Can2RxData[64];
 
 
 
-void FDCAN1_Config(void)
-{
+void FDCAN1_Config(void){   
   FDCAN_FilterTypeDef sFilterConfig;
   /* Configure Rx filter */	
 	sFilterConfig.IdType = FDCAN_STANDARD_ID;//扩展ID不接收
   sFilterConfig.FilterIndex = 0;
   sFilterConfig.FilterType = FDCAN_FILTER_MASK;
   sFilterConfig.FilterConfig = FDCAN_FILTER_TO_RXFIFO0;
-  sFilterConfig.FilterID1 = 0x00000000; // 
-  sFilterConfig.FilterID2 = 0x00000000; // 
-  if(HAL_FDCAN_ConfigFilter(&hfdcan1, &sFilterConfig) != HAL_OK)
-	{
+  sFilterConfig.FilterID1 = 0x00000000; 
+  sFilterConfig.FilterID2 = 0x00000000;  
+  if(HAL_FDCAN_ConfigFilter(&hfdcan1, &sFilterConfig) != HAL_OK){
 		Error_Handler();
 	}
 		

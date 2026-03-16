@@ -6,14 +6,14 @@
   ******************************************************************************
   * @attention
   *
-  * Copyright (c) 2024 STMicroelectronics.
+  * Copyright (c) 2026 STMicroelectronics.
   * All rights reserved.
   *
   * This software is licensed under terms that can be found in the LICENSE file
   * in the root directory of this software component.
   * If no LICENSE file comes with this software, it is provided AS-IS.
   *
- ******************************************************************************
+  ******************************************************************************
   */
 /* USER CODE END Header */
 
@@ -22,7 +22,7 @@
 #define __STM32H7xx_IT_H
 
 #ifdef __cplusplus
- extern "C" {
+extern "C" {
 #endif
 
 /* Private includes ----------------------------------------------------------*/
@@ -54,11 +54,21 @@ void UsageFault_Handler(void);
 void DebugMon_Handler(void);
 void DMA1_Stream0_IRQHandler(void);
 void DMA1_Stream1_IRQHandler(void);
+void DMA1_Stream2_IRQHandler(void);
+void DMA1_Stream3_IRQHandler(void);
+void DMA1_Stream4_IRQHandler(void);
 void FDCAN1_IT0_IRQHandler(void);
 void FDCAN2_IT0_IRQHandler(void);
-void TIM2_IRQHandler(void);
+void FDCAN1_IT1_IRQHandler(void);
+void FDCAN2_IT1_IRQHandler(void);
+void TIM1_UP_IRQHandler(void);
 void SPI2_IRQHandler(void);
+void USART1_IRQHandler(void);
+void UART5_IRQHandler(void);
+void UART7_IRQHandler(void);
+void USART10_IRQHandler(void);
 void FDCAN3_IT0_IRQHandler(void);
+void FDCAN3_IT1_IRQHandler(void);
 /* USER CODE BEGIN EFP */
 
 /* USER CODE END EFP */
